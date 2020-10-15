@@ -1,6 +1,5 @@
 #include "MKL25Z4.h"                    // Device header
 #define BAUD_RATE 9600
-#define UART_TX_PORTE22 22
 #define UART_RX_PORTE23 23
 #define UART2_INT_PRIO 128										 	
 #define MASK(x) (1 << (x))
@@ -13,6 +12,8 @@
 #define LED_MASK(x) (x&0x06)
 #define BIT0_MASK(x) (x&0x01)
 
+volatile uint8_t rx_data = 0x01;
+
 /*	Init UART2	*/
 void initUART2(uint32_t baud_rate){
 	
@@ -20,9 +21,6 @@ void initUART2(uint32_t baud_rate){
 	
 	SIM->SCGC4 |= SIM_SCGC4_UART2_MASK;
 	SIM->SCGC5 |= SIM_SCGC5_PORTE_MASK;
-	
-	PORTE-> PCR[UART_TX_PORTE22] &= ~PORT_PCR_MUX_MASK;
-	PORTE-> PCR[UART_TX_PORTE22] |= PORT_PCR_MUX(4);
 	
 	PORTE-> PCR[UART_RX_PORTE23] &= ~PORT_PCR_MUX_MASK;
 	PORTE-> PCR[UART_RX_PORTE23] |= PORT_PCR_MUX(4);
@@ -38,9 +36,12 @@ void initUART2(uint32_t baud_rate){
 	UART2->S2 = 0;
 	UART2->C3 = 0;
 	
-	UART2->C2 |= (UART_C2_TE_MASK)|(UART_C2_RE_MASK);
-	
-	
+	UART2->C2 |= (UART_C2_RE_MASK);
+	NVIC_SetPriority(UART2_IRQn, 128);
+	NVIC_ClearPendingIRQ(UART2_IRQn);
+	NVIC_EnableIRQ(UART2_IRQn);
+	UART2->C2 |= UART_C2_RIE_MASK;
+
 }
 
 unsigned int counter = 0;
@@ -99,14 +100,27 @@ void led_control(colours_t colour) {
 }
 /* UART TRANSMIT POLL */
 
-void UART2_Transmit_Poll(uint8_t data){
-	while(!(UART2->S1 & UART_S1_TDRE_MASK));
-	UART2->D = data;
-}
+//void UART2_Transmit_Poll(uint8_t data){
+//	while(!(UART2->S1 & UART_S1_TDRE_MASK));
+//	UART2->D = data;
+//}
 
-uint8_t UART2_Receive_Poll(void){
-	while(!(UART2->S1 & UART_S1_RDRF_MASK));
-	return (UART2->D);
+//uint8_t UART2_Receive_Poll(void){
+//	while(!(UART2->S1 & UART_S1_RDRF_MASK));
+//	return (UART2->D);
+//}
+
+void UART2_IRQHandler(void) {
+	
+	NVIC_ClearPendingIRQ(UART2_IRQn);
+	
+	if (UART2->S1 & UART_S1_RDRF_MASK) {
+	// received a character
+		rx_data = UART2->D;
+	} 
+	
+	PORTD->ISFR = 0xffffffff;
+	
 }
 
 /* DELAY ROUTINE*/
@@ -119,7 +133,6 @@ static void delay(volatile uint32_t nof){
 
 /* MAIN FUNCTION */
 int main(void){
-	uint8_t rx_data = 0x01;
 	
 	SystemCoreClockUpdate();
 	initUART2(BAUD_RATE);
@@ -128,7 +141,7 @@ int main(void){
 	while(1){
 		/* RX and TX*/
 		//UART2_Transmit_Poll(rx_data);
-		rx_data= UART2_Receive_Poll();
+		//rx_data = UART2_Receive_Poll();
 		
 		if(LED_MASK(rx_data)==LED_RED){
 			if(BIT0_MASK(rx_data))
