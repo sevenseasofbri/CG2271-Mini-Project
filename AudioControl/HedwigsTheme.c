@@ -6,8 +6,8 @@ PTB18 -> TM2 CH0
 PTB19 -> TM2 CH1
 */
 
-#define PTB0_Pin 0
-#define PTB1_Pin 1
+#define PTD0_Pin 0
+#define PTD1_Pin 1
 #define NOTE_CNT 25
 #define TO_MOD(x) 375000/(x)
 
@@ -165,37 +165,37 @@ int melody[] = {
 
 void initPWM() {
 	// Enable Clock Gating for PORTB
-	SIM->SCGC5 = (SIM_SCGC5_PORTB_MASK);
+	SIM->SCGC5 = (SIM_SCGC5_PORTD_MASK);
 
 	// Configure Mode 3 for PWM pin operation
-	PORTB->PCR[PTB0_Pin] &= ~PORT_PCR_MUX_MASK;
-	PORTB->PCR[PTB0_Pin] |= PORT_PCR_MUX(3);
-	PORTB->PCR[PTB1_Pin] &= ~PORT_PCR_MUX_MASK;
-	PORTB->PCR[PTB1_Pin] |= PORT_PCR_MUX(3);
+	PORTD->PCR[PTD0_Pin] &= ~PORT_PCR_MUX_MASK;
+	PORTD->PCR[PTD0_Pin] |= PORT_PCR_MUX(4);
+	PORTD->PCR[PTD1_Pin] &= ~PORT_PCR_MUX_MASK;
+	PORTD->PCR[PTD1_Pin] |= PORT_PCR_MUX(4);
 	
 	//Enable clock gating for Timer1
-	SIM->SCGC6 = (SIM_SCGC6_TPM1_MASK);
+	SIM->SCGC6 = (SIM_SCGC6_TPM0_MASK);
 	
 	//Select clock for TPM module
 	SIM->SOPT2 &= ~SIM_SOPT2_TPMSRC_MASK;
 	SIM->SOPT2 |= SIM_SOPT2_TPMSRC(1); //MCGFLLCLK OR MCGPLLCLK/2
 	
 	//set modulo value 48000000/128 = 375000, 375000Hz/50Hz = 7500	
-	TPM1->MOD = 7500;
+	TPM0->MOD = 7500;
 	
 	//Edge-Aligned PWM
 	//CMOD - 1 and PS - 111 (128)
-	TPM1_SC &= ~((TPM_SC_CMOD_MASK) | (TPM_SC_PS_MASK));
-	TPM1_SC |= (TPM_SC_CMOD(1) | TPM_SC_PS(7)); //CMOD = 1 => LPTPM counter increments on every LPTPM counter clock
-	TPM1_SC &= ~(TPM_SC_CPWMS_MASK); //count up by default (0)
+	TPM0_SC &= ~((TPM_SC_CMOD_MASK) | (TPM_SC_PS_MASK));
+	TPM0_SC |= (TPM_SC_CMOD(1) | TPM_SC_PS(7)); //CMOD = 1 => LPTPM counter increments on every LPTPM counter clock
+	TPM0_SC &= ~(TPM_SC_CPWMS_MASK); //count up by default (0)
 
-	//enable PWM on TPM1 channel 0 - PTB0
-	TPM1_C0SC &= ~((TPM_CnSC_ELSB_MASK) | (TPM_CnSC_ELSA_MASK) | (TPM_CnSC_MSB_MASK) | (TPM_CnSC_MSA_MASK));
-	TPM1_C0SC |= (TPM_CnSC_ELSB(1) | TPM_CnSC_MSB(1));
+	//enable PWM on TPM0 channel 0 - PTD0
+	TPM0_C0SC &= ~((TPM_CnSC_ELSB_MASK) | (TPM_CnSC_ELSA_MASK) | (TPM_CnSC_MSB_MASK) | (TPM_CnSC_MSA_MASK));
+	TPM0_C0SC |= (TPM_CnSC_ELSB(1) | TPM_CnSC_MSB(1));
 	
-	//enable PWM on TPM1 channel 1 - PTB1
-	TPM1_C1SC &= ~((TPM_CnSC_ELSB_MASK) | (TPM_CnSC_ELSA_MASK) | (TPM_CnSC_MSB_MASK) | (TPM_CnSC_MSA_MASK));
-	TPM1_C1SC |= (TPM_CnSC_ELSB(1) | TPM_CnSC_MSB(1));
+	//enable PWM on TPM0 channel 1 - PTD1
+	TPM0_C1SC &= ~((TPM_CnSC_ELSB_MASK) | (TPM_CnSC_ELSA_MASK) | (TPM_CnSC_MSB_MASK) | (TPM_CnSC_MSA_MASK));
+	TPM0_C1SC |= (TPM_CnSC_ELSB(1) | TPM_CnSC_MSB(1));
 }
 
 /* Delay Function */
@@ -226,9 +226,6 @@ int main(void) {
 	SystemCoreClockUpdate();
 	initPWM();
 	
-	//TPM1_C0V = 0x0ea6; //50% duty cycle -> 7500/2 = 3750 in hex:0x0ea6
-	//TPM1_C1V = 0x0753; //25% duty cycle -> 7500/4 = 1875 in hex:0x0753
-	
 	// sizeof gives the number of bytes, each int value is composed of two bytes (16 bits)
 	// there are two values per note (pitch and duration), so for each note there are four bytes
 	int notes = sizeof(melody) / sizeof(melody[0]);
@@ -254,12 +251,12 @@ int main(void) {
 				noteDuration *= 1.5; // increases the duration in half for dotted notes
 			}
 			period = TO_MOD(melody[i]);
-			TPM1->MOD = period;
-			TPM1_C0V = period / 8; //12.5% duty cycle
+			TPM0->MOD = period;
+			TPM0_C0V = period / 8; //12.5% duty cycle
 			delay100x(2*9*noteDuration);
-			TPM1->MOD = 0;
-			TPM1_C0V = 0;
-			delay100x(10*noteDuration);
+			TPM0->MOD = 0;
+			TPM0_C0V = 0;
+			delay100x(2*10*noteDuration);
 		}
 		
 	}
