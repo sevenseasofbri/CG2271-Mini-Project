@@ -35,7 +35,7 @@ typedef enum onOff {
 char led_colours[2][2] = {{0, led_a}};
 
 	
-osMessageQueueId_t ledQ, audioQ, motorQ, connectQ;
+osMessageQueueId_t audioQ, motorQ, connectQ, ledRedQ, ledGreenQ;
 osMessageQueueId_t controlQ;
 
 
@@ -157,15 +157,52 @@ void motor_thread () {
 	}
 }
 
-void  led_rear_thread (void *argument) {
+void  led_green_thread (void *argument) {
+  uint8_t rx_p;
+	uint8_t leds[8] = {LED_F2, LED_F3, LED_F4, LED_F5, LED_F11, LED_F10, LED_F9, LED_F8};
+	int c = 0;
+  for (;;) {
+		osMessageQueueGet(ledGreenQ, &rx_p, NULL, osWaitForever);
+		
+    // if robot is stationary
+		if (rx_p == 0x11) {
+			PTE -> PSOR |= MASK(LED_F2) | MASK(LED_F3) | MASK(LED_F4) | MASK(LED_F5);
+			PTB -> PSOR |= MASK(LED_F8) | MASK(LED_F9) | MASK(LED_F10) | MASK(LED_F11);
+			
+		} else { 
+			c = (c + 1) % 8;
+			if (c < 4) {
+				PTE -> PSOR |= MASK(leds[c]);
+				osDelay(250);
+				PTE -> PCOR |= MASK(leds[c]);
+			} else if (c >= 4) {
+				PTB -> PSOR |= MASK(leds[c]);
+				osDelay(250);
+				PTB -> PCOR |= MASK(leds[c]);
+			} 
+		}
+		
+ }
+}
+
+void  led_red_thread (void *argument) {
   uint8_t rx_p;
   for (;;) {
-		osMessageQueueGet(ledQ, &rx_p, NULL, osWaitForever);
+		osMessageQueueGet(ledRedQ, &rx_p, NULL, osWaitForever);
     
-		if(rx_p == 0x03) {
-			PTE -> PSOR |= MASK(2);
-		} else {
-			PTE -> PCOR |= MASK(2);
+		// if robot is stationary
+		if (rx_p == 0x11) {
+			// blink red led at 250ms 
+			PTA -> PSOR |= MASK(LED_R1);
+			osDelay(250);
+			PTA -> PCOR |= MASK(LED_R1);
+			osDelay(250);
+		} else { 
+			// blink red led at 500ms
+			PTA -> PSOR |= MASK(LED_R1);
+			osDelay(500);
+			PTA -> PCOR |= MASK(LED_R1);
+			osDelay(500);
 		}
  }
 }
@@ -173,7 +210,8 @@ void  led_rear_thread (void *argument) {
 void control_thread(void *argument) {
 	for(;;) {
 		osMessageQueueGet(controlQ, &uart_data, NULL, osWaitForever);
-		osMessageQueuePut(ledQ, &uart_data, NULL, 0); 
+		osMessageQueuePut(ledGreenQ, &uart_data, NULL, 0); 
+		osMessageQueuePut(ledRedQ, &uart_data, NULL, 0); 
 		osMessageQueuePut(motorQ, &uart_data, NULL, 0);
 		osDelay(1000);
 	}
@@ -197,8 +235,10 @@ int main (void) {
   //led_flag = osEventFlagsNew(NULL);
 	osThreadNew(control_thread, NULL, NULL);
 	controlQ = osMessageQueueNew(MSG_COUNT, sizeof(uint8_t), NULL);
-	osThreadNew(led_rear_thread, NULL, NULL);
-	ledQ = osMessageQueueNew(MSG_COUNT, sizeof(uint8_t), NULL);
+	osThreadNew(led_green_thread, NULL, NULL);
+	osThreadNew(led_red_thread, NULL, NULL);
+	ledGreenQ = osMessageQueueNew(MSG_COUNT, sizeof(uint8_t), NULL);
+	ledRedQ = osMessageQueueNew(MSG_COUNT, sizeof(uint8_t), NULL);
 	osThreadNew (motor_thread, NULL, NULL);
 	motorQ = osMessageQueueNew(MSG_COUNT, sizeof(uint8_t), NULL);
   osKernelStart();                      // Start thread execution
