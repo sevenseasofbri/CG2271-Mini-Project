@@ -178,6 +178,28 @@ int starWarsMelody [] = {
 	NOTE_F4, 375, NOTE_C5, 125, NOTE_A4, 650, REST, 650
 };
 
+
+//int win7StartUpMelody [] = {
+//	NOTE_B5, 250, NOTE_E1, 500, NOTE_FS2, 250, NOTE_B5, 1000
+//};
+
+int starTrekStartUpMelody[] = {
+	
+  //available at https://musescore.com/user/10768291/scores/4594271
+ 
+  NOTE_D4, -8, NOTE_G4, 16, NOTE_C5, -4, 
+  NOTE_B4, 8, NOTE_G4, -16, NOTE_E4, -16, NOTE_A4, -16,
+  NOTE_D5, 2,
+  
+};
+
+int marioGameOverMelody [] = {
+	  //game over sound
+  NOTE_C5,-4, NOTE_G4,-4, NOTE_E4,4, //45
+  NOTE_A4,-8, NOTE_B4,-8, NOTE_A4,-8, NOTE_GS4,-8, NOTE_AS4,-8, NOTE_GS4,-8,
+  NOTE_G4,8, NOTE_D4,8, NOTE_E4,-2,  
+};
+
 void initPWM() {
 	// Enable Clock Gating for PORTB
 	SIM->SCGC5 = (SIM_SCGC5_PORTD_MASK);
@@ -295,11 +317,98 @@ void playStarWars() {
 	}
 }
 
+//void playWin7StartUp () {
+//	int notes = sizeof(win7StartUpMelody) / sizeof(win7StartUpMelody[0]);
+//	
+//	int noteDuration = 0, period = 0;
+//	
+//	while(1) {
+//		
+//		for(int i = 0; i<notes; i+=2) {
+//			// calculates the duration of each note
+//			noteDuration = win7StartUpMelody[i + 1];
+//			period = TO_MOD(win7StartUpMelody[i]);
+//			TPM0->MOD = period;
+//			TPM0_C0V = period / 4; //12.5% duty cycle
+//			delay100x(25*noteDuration);
+//			TPM0->MOD = 0;
+//			TPM0_C0V = 0;
+//			delay100x(24*noteDuration);
+//		}
+//		delay100x(0x1000);
+//	}
+//}
+
+void playMarioGameOver () {
+	int notes = sizeof(marioGameOverMelody) / sizeof(marioGameOverMelody[0]);
+
+	int wholenote = (60000 * 4) / tempo;
+
+	int divider = 0, noteDuration = 0;
+
+	uint32_t period;
+
+	while(1) {
+
+		for(int i = 0; i<notes; i+=2) {
+			divider = marioGameOverMelody[i + 1];
+			if (divider > 0) {
+				noteDuration = (wholenote) / divider;
+			} else if (divider < 0) {
+				noteDuration = (wholenote) / (int)fabs((float)divider);
+				noteDuration *= 1.5;
+			}
+			period = TO_MOD(marioGameOverMelody[i]);
+			TPM0->MOD = period;
+			TPM0_C0V = period / 8; //12.5% duty cycle
+			delay100x(2*9*noteDuration);
+			TPM0->MOD = 0;
+			TPM0_C0V = 0;
+			delay100x(2*10*noteDuration);
+		}
+
+	}
+}
+
+void playStarTrekStartUp () {
+	int notes = sizeof(starTrekStartUpMelody) / sizeof(starTrekStartUpMelody[0]);
+
+	int wholenote = (60000 * 4) / tempo;
+
+	int divider = 0, noteDuration = 0;
+
+	uint32_t period;
+
+	while(1) {
+
+		for(int i = 0; i<notes; i+=2) {
+			divider = starTrekStartUpMelody[i + 1];
+			if (divider > 0) {
+				noteDuration = (wholenote) / divider;
+			} else if (divider < 0) {
+				noteDuration = (wholenote) / (int)fabs((float)divider);
+				noteDuration *= 1.5;
+			}
+			period = TO_MOD(starTrekStartUpMelody[i]);
+			TPM0->MOD = period;
+			TPM0_C0V = period / 8; //12.5% duty cycle
+			delay100x(2*9*noteDuration);
+			TPM0->MOD = 0;
+			TPM0_C0V = 0;
+			delay100x(2*10*noteDuration);
+		}
+
+	}
+}
+
 int main(void) {
 
 	SystemCoreClockUpdate();
 	initPWM();
 	//playHedwigsTheme();
-	playStarWars();
+	//playStarWars();
+	//playWin7StartUp();
+	//playMarioGameOver();
+	playStarTrekStartUp();
 	
 }
