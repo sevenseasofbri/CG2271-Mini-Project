@@ -58,7 +58,7 @@ PTB19 -> TM2 CH1
 #define NOTE_A3  220
 #define NOTE_AS3 233
 #define NOTE_B3  247
-#define NOTE_C4  262
+#define NOTE_C4  261
 #define NOTE_CS4 277
 #define NOTE_D4  294
 #define NOTE_DS4 311
@@ -68,6 +68,7 @@ PTB19 -> TM2 CH1
 #define NOTE_G4  392
 #define NOTE_GS4 415
 #define NOTE_A4  440
+#define NOTE_AS 455
 #define NOTE_AS4 466
 #define NOTE_B4  494
 #define NOTE_C5  523
@@ -78,7 +79,7 @@ PTB19 -> TM2 CH1
 #define NOTE_F5  698
 #define NOTE_FS5 740
 #define NOTE_G5  784
-#define NOTE_GS5 831
+#define NOTE_GS5 830
 #define NOTE_A5  880
 #define NOTE_AS5 932
 #define NOTE_B5  988
@@ -119,7 +120,7 @@ int tempo = 144;
 // a 4 means a quarter note, 8 an eighteenth , 16 sixteenth, so on
 // !!negative numbers are used to represent dotted notes,
 // so -4 means a dotted quarter note, that is, a quarter plus an eighteenth!!
-int melody[] = {
+int hedwigsThemeMelody[] = {
 
 
   // Hedwig's theme fromn the Harry Potter Movies
@@ -161,6 +162,42 @@ int melody[] = {
   NOTE_CS4, 2, NOTE_AS4, 4,
   NOTE_G4, -1, 
   
+};
+
+int starWarsMelody [] = {
+	NOTE_A4, 500, NOTE_A4, 500, NOTE_A4, 500, NOTE_A4, 350, NOTE_C5, 150, NOTE_A4, 500, NOTE_F4, 350, 
+	NOTE_C5, 150, NOTE_A4, 650, REST, 500, NOTE_E5, 500, NOTE_E5, 500, NOTE_E5, 500, NOTE_F5, 350, 
+	NOTE_C5, 150, NOTE_GS4, 500, NOTE_F4, 350, NOTE_C5, 150, NOTE_A4, 650, REST, 500, NOTE_A5, 500, 
+	NOTE_A4, 300, NOTE_A4, 150, NOTE_A5, 500, NOTE_GS5, 325, NOTE_G5, 175, NOTE_FS5, 125, NOTE_F5, 125, 
+	NOTE_FS5, 250, REST, 325, NOTE_AS, 250, NOTE_DS5, 500, NOTE_D5, 325, NOTE_CS5, 175, NOTE_C5, 125, 
+	NOTE_AS4, 125, NOTE_C5, 250, REST, 350, NOTE_F4, 250, NOTE_GS4, 500, NOTE_F4, 350, NOTE_A4, 125, 
+	NOTE_C5, 500, NOTE_A4, 375, NOTE_C5, 125, NOTE_E5, 650, REST, 500, NOTE_A5, 500, NOTE_A4, 300, 
+	NOTE_A4, 150, NOTE_A5, 500, NOTE_GS5, 325, NOTE_G5, 175, NOTE_FS5, 125, NOTE_F5, 125, NOTE_FS5, 250, 
+	REST, 325, NOTE_AS, 250, NOTE_DS5, 500, NOTE_D5, 325, NOTE_CS5, 175, NOTE_C5, 125, NOTE_AS4, 125, 
+	NOTE_C5, 250, REST, 350, NOTE_F4, 250, NOTE_GS4, 500, NOTE_F4, 375, NOTE_C5, 125, NOTE_A4, 500, 
+	NOTE_F4, 375, NOTE_C5, 125, NOTE_A4, 650, REST, 650
+};
+
+
+//int win7StartUpMelody [] = {
+//	NOTE_B5, 250, NOTE_E1, 500, NOTE_FS2, 250, NOTE_B5, 1000
+//};
+
+int starTrekStartUpMelody[] = {
+	
+  //available at https://musescore.com/user/10768291/scores/4594271
+ 
+  NOTE_D4, -8, NOTE_G4, 16, NOTE_C5, -4, 
+  NOTE_B4, 8, NOTE_G4, -16, NOTE_E4, -16, NOTE_A4, -16,
+  NOTE_D5, 2,
+  
+};
+
+int marioGameOverMelody [] = {
+	  //game over sound
+  NOTE_C5,-4, NOTE_G4,-4, NOTE_E4,4, //45
+  NOTE_A4,-8, NOTE_B4,-8, NOTE_A4,-8, NOTE_GS4,-8, NOTE_AS4,-8, NOTE_GS4,-8,
+  NOTE_G4,8, NOTE_D4,8, NOTE_E4,-2,  
 };
 
 void initPWM() {
@@ -221,27 +258,23 @@ static void delay100x(volatile uint32_t nof) {
 	}
 }
 
-int main(void) {
-
-	SystemCoreClockUpdate();
-	initPWM();
-	
+void playHedwigsTheme() {
 	// sizeof gives the number of bytes, each int value is composed of two bytes (16 bits)
 	// there are two values per note (pitch and duration), so for each note there are four bytes
-	int notes = sizeof(melody) / sizeof(melody[0]);
+	int notes = sizeof(hedwigsThemeMelody) / sizeof(hedwigsThemeMelody[0]);
 
 	// this calculates the duration of a whole note in ms (60s/tempo)*4 beats
 	int wholenote = (60000 * 4) / tempo;
 
 	int divider = 0, noteDuration = 0;
-	
+
 	uint32_t period;
-	
+
 	while(1) {
-		
+
 		for(int i = 0; i<notes; i+=2) {
 			// calculates the duration of each note
-			divider = melody[i + 1];
+			divider = hedwigsThemeMelody[i + 1];
 			if (divider > 0) {
 				// regular note, just proceed
 				noteDuration = (wholenote) / divider;
@@ -250,7 +283,7 @@ int main(void) {
 				noteDuration = (wholenote) / (int)fabs((float)divider);
 				noteDuration *= 1.5; // increases the duration in half for dotted notes
 			}
-			period = TO_MOD(melody[i]);
+			period = TO_MOD(hedwigsThemeMelody[i]);
 			TPM0->MOD = period;
 			TPM0_C0V = period / 8; //12.5% duty cycle
 			delay100x(2*9*noteDuration);
@@ -258,84 +291,124 @@ int main(void) {
 			TPM0_C0V = 0;
 			delay100x(2*10*noteDuration);
 		}
+
+	}
+}
+
+void playStarWars() {
+	int notes = sizeof(starWarsMelody) / sizeof(starWarsMelody[0]);
+
+	int noteDuration = 0, period = 0;
+	
+	while(1) {
+		
+		for(int i = 0; i<notes; i+=2) {
+			// calculates the duration of each note
+			noteDuration = starWarsMelody[i + 1];
+			period = TO_MOD(starWarsMelody[i]);
+			TPM0->MOD = period;
+			TPM0_C0V = period / 4; //12.5% duty cycle
+			delay100x(25*noteDuration);
+			TPM0->MOD = 0;
+			TPM0_C0V = 0;
+			delay100x(24*noteDuration);
+		}
 		
 	}
 }
-/*
-#include "MKL25Z4.h"                    // Device header
-#define PTB0_PIN 0
-#define PTB1_PIN 1
-#define MUSICAL_NOTE_CNT 25
-#define FREQ_2_MOD(x) (375000 / x)
 
-int musical_notes[] = {262, 262, 294, 262, 349, 330, 262, 262, 294, 262, 392, 349, 262, 262, 523, 440, 349, 330, 294, 466, 466, 440,349, 392, 349
-};//{242, 294, 330, 349, 392, 440, 494};
+//void playWin7StartUp () {
+//	int notes = sizeof(win7StartUpMelody) / sizeof(win7StartUpMelody[0]);
+//	
+//	int noteDuration = 0, period = 0;
+//	
+//	while(1) {
+//		
+//		for(int i = 0; i<notes; i+=2) {
+//			// calculates the duration of each note
+//			noteDuration = win7StartUpMelody[i + 1];
+//			period = TO_MOD(win7StartUpMelody[i]);
+//			TPM0->MOD = period;
+//			TPM0_C0V = period / 4; //12.5% duty cycle
+//			delay100x(25*noteDuration);
+//			TPM0->MOD = 0;
+//			TPM0_C0V = 0;
+//			delay100x(24*noteDuration);
+//		}
+//		delay100x(0x1000);
+//	}
+//}
 
-void initPWM(){
-	SIM_SCGC5 |= SIM_SCGC5_PORTB_MASK;
-	
-	PORTB-> PCR[PTB0_PIN] &= ~PORT_PCR_MUX_MASK;
-	PORTB-> PCR[PTB0_PIN] |= PORT_PCR_MUX(3);
-	
-	PORTB-> PCR[PTB1_PIN] &= ~PORT_PCR_MUX_MASK;
-	PORTB-> PCR[PTB1_PIN] |= PORT_PCR_MUX(3);
-	
-	SIM-> SCGC6 |= SIM_SCGC6_TPM1_MASK;
-	
-	SIM-> SOPT2 &= ~SIM_SOPT2_TPMSRC_MASK;
-	SIM-> SOPT2 |= SIM_SOPT2_TPMSRC(1);
-	
-	//Prescaler: 128, Therefore: 48000000/128 = 375000. Then the count will become: 375000/50 = 7500 = 0x1D4C
-	TPM1-> MOD |= 0x1D4C; 
-	
-	TPM1-> SC &= ~((TPM_SC_CMOD_MASK) | (TPM_SC_PS_MASK));
-	TPM1-> SC |= (TPM_SC_CMOD(1) | TPM_SC_PS(7)); //Sets prescaler to 128
-	TPM1-> SC &= ~(TPM_SC_CPWMS_MASK);
-	//Enable PWM on TPM1 channel 0 fro PTB0
-	TPM1_C0SC &= ~((TPM_CnSC_ELSB_MASK) | (TPM_CnSC_ELSA_MASK) | (TPM_CnSC_MSB_MASK) | (TPM_CnSC_MSA_MASK));
-	TPM1_C0SC |= (TPM_CnSC_ELSB(1) | TPM_CnSC_MSB(1));
-	//Enable PWM on TPM1 channel 1 for PTB1
-	TPM1_C1SC &= ~((TPM_CnSC_ELSB_MASK) | (TPM_CnSC_ELSA_MASK) | (TPM_CnSC_MSB_MASK) | (TPM_CnSC_MSA_MASK));
-	TPM1_C1SC |= (TPM_CnSC_ELSB(1) | TPM_CnSC_MSB(1));
+void playMarioGameOver () {
+	int notes = sizeof(marioGameOverMelody) / sizeof(marioGameOverMelody[0]);
+
+	int wholenote = (60000 * 4) / tempo;
+
+	int divider = 0, noteDuration = 0;
+
+	uint32_t period;
+
+	while(1) {
+
+		for(int i = 0; i<notes; i+=2) {
+			divider = marioGameOverMelody[i + 1];
+			if (divider > 0) {
+				noteDuration = (wholenote) / divider;
+			} else if (divider < 0) {
+				noteDuration = (wholenote) / (int)fabs((float)divider);
+				noteDuration *= 1.5;
+			}
+			period = TO_MOD(marioGameOverMelody[i]);
+			TPM0->MOD = period;
+			TPM0_C0V = period / 8; //12.5% duty cycle
+			delay100x(2*9*noteDuration);
+			TPM0->MOD = 0;
+			TPM0_C0V = 0;
+			delay100x(2*10*noteDuration);
+		}
+
+	}
 }
-*/
 
+void playStarTrekStartUp () {
+	int notes = sizeof(starTrekStartUpMelody) / sizeof(starTrekStartUpMelody[0]);
 
-/*	DELAY FUNCTION	
-static void delay(volatile uint32_t nof){
-	while(nof!=0){
-		__asm("NOP");
-		nof--;
+	int wholenote = (60000 * 4) / tempo;
+
+	int divider = 0, noteDuration = 0;
+
+	uint32_t period;
+
+	while(1) {
+
+		for(int i = 0; i<notes; i+=2) {
+			divider = starTrekStartUpMelody[i + 1];
+			if (divider > 0) {
+				noteDuration = (wholenote) / divider;
+			} else if (divider < 0) {
+				noteDuration = (wholenote) / (int)fabs((float)divider);
+				noteDuration *= 1.5;
+			}
+			period = TO_MOD(starTrekStartUpMelody[i]);
+			TPM0->MOD = period;
+			TPM0_C0V = period / 8; //12.5% duty cycle
+			delay100x(2*9*noteDuration);
+			TPM0->MOD = 0;
+			TPM0_C0V = 0;
+			delay100x(2*10*noteDuration);
+		}
+
 	}
-}*/
+}
 
+int main(void) {
 
-/*	LARGE DELAY	
-static void delay100x(volatile uint32_t nof){
-	for(int i=0; i<100; i++){
-		delay(nof);
-	}
-}*/
-
-/* MAIN FUNCTION 
-
-int main(void){
-	char i =0;
 	SystemCoreClockUpdate();
 	initPWM();
+	//playHedwigsTheme();
+	//playStarWars();
+	//playWin7StartUp();
+	//playMarioGameOver();
+	playStarTrekStartUp();
 	
-	//TPM1_C0V = 0x0EA6; //Half of 7500: 50% duty cycle
-	//TPM1_C1V = 0x753; //Quarter of 7500: 25% duty cycle
-	
-	while(1){
-		for(int i=0; i<MUSICAL_NOTE_CNT; i++){
-			TPM1 -> MOD = FREQ_2_MOD(musical_notes[i]);
-			TPM1_C0V = (FREQ_2_MOD(musical_notes[i])) / 8;
-			delay100x(0x3FFF);
-			TPM1 -> MOD = 0;
-			TPM1_C0V = 0;
-			delay100x(0xFFF);
-		}
-	}
 }
-*/
