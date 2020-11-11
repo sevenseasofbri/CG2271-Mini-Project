@@ -1,10 +1,11 @@
 #ifndef INIT_H
 #define INIT_H
 #include "MKL25Z4.h"                    // Device header
+#include <math.h>
 
 #define MASK(x) (1 << (x))
 
-// Defining Motors
+// Defining Motors Remember to reverse the connection when physically making the connections AAAAAAAAAAAAAAA
 #define LEFT_BK 0 // PTB0 TPM1_CH0
 #define LEFT_FW 1 // PTB1 TPM1_CH1
 #define RIGHT_BK 2 // PTB2 TPM2_CH0
@@ -27,7 +28,6 @@
 #define LED_F11 11 // PortB Pin 11
 
 // PWM
-#define MAX_DUTY_CYCLE 0x1D4C //7500 (50Hz)
 #define FW_MOTOR 3
 #define RV_MOTOR 5
 #define RT_MOTOR 9
@@ -40,8 +40,15 @@
 #define RT_MASK 0x09
 #define LT_MASK 0x07
 
+// SOUND
+
+#define PTD0_Pin 0
+#define PTD1_Pin 1
+
+
 void initClockGate(void);
 void initPWM(void);
 void initUART2(uint32_t);
 void initLED(void);
+void initAudio(void);
 #endif
