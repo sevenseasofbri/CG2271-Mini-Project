@@ -11,6 +11,8 @@ extern volatile uint8_t connect, end;
 
 #define NOTE_CNT 25
 #define TO_MOD(x) 375000/(x)
+
+// Initialise notes.
 #define NOTE_B0  31
 #define NOTE_C1  33
 #define NOTE_CS1 35
@@ -103,12 +105,22 @@ extern volatile uint8_t connect, end;
 #define NOTE_DS8 4978
 #define REST 0
 
+#define HEDWIGS_STARTREK_PLAY(x) (x*5/9)
+#define HEDWIGS_STARTREK_PAUSE(x) (x*25/81)
+#define MARIO_PLAY(x) (x*6)
+#define MARIO_PAUSE(x) (x*20/3)
 
+// Macros for cases of "The End" and Connection
+#define CHANGE_VAR 0xFF
+
+uint8_t dutyCycle(int, int);
 void playHedwigsTheme(void);
 void playStarWars(void);
-void playWin7StartUp(void);
 void playMarioGameOver(void);
 void playStarTrekStartUp(void);
+void delay(uint32_t);
+void delay100x(uint32_t);
+
+
 
 #endif
-

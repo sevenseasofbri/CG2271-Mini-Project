@@ -1,6 +1,6 @@
-/* INITIALISATION FUNCTIONS */
-
-#include "MKL25Z4.h"                    // Device header
+/*----------------------------------------------------------------------------
+ * INITIALISATION FUNCTIONS
+ *---------------------------------------------------------------------------*/
 #include "myInit.h"
 
 /* INIT CLOCK GATING */
@@ -146,8 +146,4 @@ void initAudio() {
 	TPM0_C0SC &= ~((TPM_CnSC_ELSB_MASK) | (TPM_CnSC_ELSA_MASK) | (TPM_CnSC_MSB_MASK) | (TPM_CnSC_MSA_MASK));
 	TPM0_C0SC |= (TPM_CnSC_ELSB(1) | TPM_CnSC_MSB(1));
 	
-	//enable PWM on TPM0 channel 1 - PTD1
-	TPM0_C1SC &= ~((TPM_CnSC_ELSB_MASK) | (TPM_CnSC_ELSA_MASK) | (TPM_CnSC_MSB_MASK) | (TPM_CnSC_MSA_MASK));
-	TPM0_C1SC |= (TPM_CnSC_ELSB(1) | TPM_CnSC_MSB(1));
 }
-

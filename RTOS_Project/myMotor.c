@@ -1,7 +1,6 @@
 /*----------------------------------------------------------------------------
  * MOTOR CONTROL
  *---------------------------------------------------------------------------*/
-#include "MKL25Z4.h"                    // Device header
 #include "myMotor.h"
 
 /** Stop the motors**/
@@ -22,9 +21,9 @@ void reverse(state_t s) {
 		TPM2_C1V = 0;
 	}
   TPM1->MOD = 7500;
-	TPM1_C0V = MAX_DUTY_CYCLE/2;
+	TPM1_C0V = MAX_DUTY_CYCLE;
 	TPM2->MOD = 7500;
-	TPM2_C0V = MAX_DUTY_CYCLE/2;
+	TPM2_C0V = MAX_DUTY_CYCLE;
 }
 
 /** Move Forward **/
@@ -34,9 +33,9 @@ void forward(state_t s) {
 		TPM2_C0V = 0;
 	 }
 	 TPM1->MOD = 7500;
-	 TPM1_C1V = MAX_DUTY_CYCLE/2;
+	 TPM1_C1V = MAX_DUTY_CYCLE;
 	 TPM2->MOD = 7500;
-	 TPM2_C1V = MAX_DUTY_CYCLE/2;
+	 TPM2_C1V = MAX_DUTY_CYCLE;
 }
 
 /** Rotate Right **/
@@ -46,9 +45,9 @@ void right(state_t s) {
 		  TPM2_C1V = 0;
 	 }
 	 TPM1->MOD = 7500;
-	 TPM1_C1V = MAX_DUTY_CYCLE/2;
+	 TPM1_C1V = MAX_DUTY_CYCLE/3;
 	 TPM2->MOD = 7500;
-	 TPM2_C0V = MAX_DUTY_CYCLE/2;
+	 TPM2_C0V = MAX_DUTY_CYCLE/3;
 }
 
 /** Rotate Left **/
@@ -58,9 +57,9 @@ void left(state_t s) {
 		 TPM2_C0V = 0;
 	 }
 	 TPM2->MOD = 7500;
-	 TPM2_C1V = MAX_DUTY_CYCLE/2;
+	 TPM2_C1V = MAX_DUTY_CYCLE/3;
 	 TPM1->MOD = 7500;
-	 TPM1_C0V = MAX_DUTY_CYCLE/2;
+	 TPM1_C0V = MAX_DUTY_CYCLE/3;
 }
 
 /** Curved Forward Left**/
@@ -70,9 +69,9 @@ void leftforward(state_t s) {
 		TPM2_C0V = 0;
 	}
 	 TPM2->MOD = 7500; //right
-	 TPM2_C1V = MAX_DUTY_CYCLE/2;
+	 TPM2_C1V = MAX_DUTY_CYCLE;
 	 TPM1->MOD = 7500; //left
-	 TPM1_C1V = MAX_DUTY_CYCLE/8;
+	 TPM1_C1V = MAX_DUTY_CYCLE/6;
 	
 }
 
@@ -83,9 +82,9 @@ void leftreverse(state_t s) {
 		TPM2_C1V = 0;
 	}
 	 TPM2->MOD = 7500; //right
-	 TPM2_C0V = MAX_DUTY_CYCLE/2;
+	 TPM2_C0V = MAX_DUTY_CYCLE;
 	 TPM1->MOD = 7500; //left
-	 TPM1_C0V = MAX_DUTY_CYCLE/8;
+	 TPM1_C0V = MAX_DUTY_CYCLE/6;
 	
 }
 
@@ -96,9 +95,9 @@ void rightforward(state_t s) {
 		TPM2_C0V = 0;
 	}
 	 TPM2->MOD = 7500; //right
-	 TPM2_C1V = MAX_DUTY_CYCLE/8;
+	 TPM2_C1V = MAX_DUTY_CYCLE/6;
 	 TPM1->MOD = 7500; //left
-	 TPM1_C1V = MAX_DUTY_CYCLE/2;
+	 TPM1_C1V = MAX_DUTY_CYCLE;
 	
 }
 
@@ -109,8 +108,8 @@ void rightreverse(state_t s) {
 		TPM2_C1V = 0;
 	}
 	 TPM2->MOD = 7500; //right
-	 TPM2_C0V = MAX_DUTY_CYCLE/8;
+	 TPM2_C0V = MAX_DUTY_CYCLE/6;
 	 TPM1->MOD = 7500; //left
-	 TPM1_C0V = MAX_DUTY_CYCLE/2;
+	 TPM1_C0V = MAX_DUTY_CYCLE;
 	
 }

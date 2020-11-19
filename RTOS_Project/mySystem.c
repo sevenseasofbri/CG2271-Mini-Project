@@ -1,62 +1,49 @@
+/*----------------------------------------------------------------------------
+ * SYSTEM CONTROL
+ *---------------------------------------------------------------------------*/
+#include "MKL25Z4.h"                    // Device header
 #include "RTE_Components.h"
 #include  CMSIS_device_header
 #include "cmsis_os2.h"
-#include "MKL25Z4.h"                    // Device header
 #include "myInit.h"
 #include "myMotor.h"
 #include "myAudio.h"
+#include "myLed.h"
 
 #define MSG_COUNT 1
 
-// Define commands for led rear control
-#define LED_RED_MOVE 0x01
-#define LED_RED_STOP 0x02
-
-uint8_t rx_data = 0x00;
+uint8_t rx_data = RESET;
 uint8_t uart_data;
 
 volatile state_t state = STOP;
 
-osMessageQueueId_t audioQ, motorQ, connectQ, ledRedQ, ledGreenQ;
+osMessageQueueId_t audioQ, motorQ, ledRedQ, ledGreenQ;
 osMessageQueueId_t controlQ;
-
-
-/*----------------------------------------------------------------------------
- * LED LIBRARY FUNCTIONS
- *---------------------------------------------------------------------------*/
-
-void offLED(void) {
- // should add some control here to decide which led to off (take in an arg?)
-		PTA->PCOR |= MASK(LED_R1);
- // PTB->PCOR |= (MASK(LED_F8) | MASK(LED_F9) | MASK(LED_F10) | MASK(LED_F11));
- // PTE->PCOR |= (MASK(LED_F2) | MASK(LED_F3) | MASK(LED_F4) | MASK(LED_F5));
-}
-
-void greenFlashTwice() {
-	int i;
-	for(i = 0; i<2; i++) {
-		PTE -> PSOR |= MASK(LED_F2) | MASK(LED_F3) | MASK(LED_F4) | MASK(LED_F5);
-		PTB -> PSOR |= MASK(LED_F8) | MASK(LED_F9) | MASK(LED_F10) | MASK(LED_F11);
-		osDelay(1000);
-		PTE -> PCOR |= MASK(LED_F2) | MASK(LED_F3) | MASK(LED_F4) | MASK(LED_F5);
-		PTB -> PCOR |= MASK(LED_F8) | MASK(LED_F9) | MASK(LED_F10) | MASK(LED_F11);
-		osDelay(1000);
-	}
-}
 
 /*----------------------------------------------------------------------------
  *  IRQ HANDLER FOR UART 
  *---------------------------------------------------------------------------*/
 void UART2_IRQHandler(void) {
+	
 	NVIC_ClearPendingIRQ(UART2_IRQn);
-	osStatus_t status;
+	
+	osStatus_t status; // For debugging purposes.
+	
 	if (UART2->S1 & UART_S1_RDRF_MASK) {
 	// received a character
 		rx_data = UART2->D;
+		
+		if(rx_data == THE_END) { //When "The End" is pressed, overrides everything.
+			playMarioGameOver();
+		} else if(rx_data == CONNECT){ //On establishing connection with bluetooth
+			connect = CONNECT;
+			end = CONNECT;
+		}
+		
 		status = osMessageQueuePut(controlQ, &rx_data , NULL, 0);  
 	} 
 	
-  PORTE->ISFR = 0xffffffff;
+  PORTE->ISFR = CLEAR_IRQ;
 	
 }
 
@@ -65,14 +52,11 @@ void UART2_IRQHandler(void) {
  *---------------------------------------------------------------------------*/
 
 /** MOTOR CONTROL THREAD **/
-void motor_thread () {
-	uint8_t rx_p;
+void tMotorControl() {
+			uint8_t rx_p = RESET;
 	for(;;) {
-	osMessageQueueGet(motorQ, &rx_p, NULL, osWaitForever);
-	if(rx_p == STOP_MASK || rx_p == 0xFF){
-			stopMotors();
-			state = STOP;
-		}else if(rx_p == FW_MASK && state != FORWARD){
+	osMessageQueueGet(motorQ, &rx_p, NULL, 0);
+	if(rx_p == FW_MASK && state != FORWARD){
 			forward(state);
 			state = FORWARD;
 		}else if(rx_p == RV_MASK && state != REVERSE){
@@ -81,115 +65,90 @@ void motor_thread () {
 		}else if(rx_p == RT_MASK && state != RIGHT){
 			right(state);
 			state = RIGHT;
-		}else if(rx_p == LT_MASK && state != LEFT){
+		}else if(rx_p== LT_MASK && state != LEFT){
 			left(state);
 			state = LEFT;
-		}else if(rx_p == 0x02 && state != FWLEFT) {
+		}else if(rx_p == FWLT_MASK && state != FWLEFT) {
 			leftforward(state);
 			state = FWLEFT;
-		}else if(rx_p == 0x04 && state != FWRIGHT) {
+		}else if(rx_p == FWRT_MASK && state != FWRIGHT) {
 			rightforward(state);
 			state = FWRIGHT;
-		}else if(rx_p == 0x06 && state != RVLEFT) {
+		}else if(rx_p == RVLT_MASK && state != RVLEFT) {
 			leftreverse(state);
 			state = RVLEFT;
-		}else if(rx_p == 0x08 && state != RVRIGHT) {
+		}else if(rx_p == RVRT_MASK && state != RVRIGHT) {
 			rightreverse(state);
 			state = RVRIGHT;
+		} else {
+			stopMotors();
+			state = STOP;
 		}
 	}
 }
 
 /** GREEN FRONT LED CONTROL THREAD **/
-void  led_green_thread (void *argument) {
-  uint8_t rx_p;
-	uint8_t leds[8] = {LED_F2, LED_F3, LED_F4, LED_F5, LED_F11, LED_F10, LED_F9, LED_F8};
+void  tLedGreen(void *argument) {
+  uint8_t rx_p = INIT_VAR;
 	int c = 0;
   for (;;) {
 		osMessageQueueGet(ledGreenQ, &rx_p, NULL, 0);
 
-    // if robot is stationary
-		if (rx_p == 0x0B) {
-			PTE -> PSOR |= MASK(LED_F2) | MASK(LED_F3) | MASK(LED_F4) | MASK(LED_F5);
-			PTB -> PSOR |= MASK(LED_F8) | MASK(LED_F9) | MASK(LED_F10) | MASK(LED_F11);
-
-		} else if(rx_p == 0x01) {
+		if (rx_p == STOP || rx_p == THE_END) {     // If robot is stationary or has completed the run.
+			greenStoppedState();
+		} else if(rx_p == CONNECT) {     //On connection with bluetooth.
 			greenFlashTwice();
-			rx_p = 0;
+			rx_p = STOP;		//To put LEDs immediately into STOP mode after connection.
 			osMessageQueuePut(ledGreenQ, &rx_p, NULL, 0);
-		} else { 
+			osMessageQueuePut(ledRedQ, &rx_p, NULL, 0);
+		} else if(rx_p != INIT_VAR) { // If the robot is moving.
 			c = (c + 1) % 8;
-			if (c < 4) {
-				PTE -> PSOR |= MASK(leds[c]);
-				osDelay(250);
-				PTE -> PCOR |= MASK(leds[c]);
-			} else if (c >= 4) {
-				PTB -> PSOR |= MASK(leds[c]);
-				osDelay(250);
-				PTB -> PCOR |= MASK(leds[c]);
-			} 
+			greenMovingState(c);
 		}
 	}
 }
 
 /** RED BACK LED CONTROL THREAD **/
-void  led_red_thread (void *argument) {
-  uint8_t rx_p;
+void  tLedRed(void *argument) {
+  uint8_t rx_p = INIT_VAR;
   for (;;) {
 		osMessageQueueGet(ledRedQ, &rx_p, NULL, 0);
-		// if robot is stationary
-		if (rx_p == 0x0B) {
-			// blink red led at 250ms 
-			PTA -> PSOR |= MASK(LED_R1);
-			osDelay(250);
-			PTA -> PCOR |= MASK(LED_R1);
-			osDelay(250);
-		} else { 
-			// blink red led at 500ms
-			PTA -> PSOR |= MASK(LED_R1);
-			osDelay(500);
-			PTA -> PCOR |= MASK(LED_R1);
-			osDelay(500);
-		}
- }
-}
-
-/** 	AUDIO CONTROL THREAD **/
-void audio_thread() {
-	uint8_t rx_p = 0xFE;
-	
-	for(;;){
-		osMessageQueueGet(audioQ, &rx_p, NULL, 0);
-		if(rx_p == 0x01) {
-			playStarTrekStartUp();
-			rx_p = 0x00;
-			osMessageQueuePut(audioQ, &rx_p, NULL, 0);
-		} else if(rx_p != 0xFE && rx_p != 0xFF){
-			playStarWars();
-		} else if(rx_p == 0xFF) {
-			playMarioGameOver();
-			rx_p = 0x00;
-			osMessageQueuePut(audioQ, &rx_p, NULL, 0);
+		
+		if (rx_p == STOP || rx_p == THE_END) {			// Blink red led at 250ms if the robot is stationary.
+			redStoppedState();
+		} else if(rx_p != INIT_VAR && rx_p != CONNECT){ 			// Blink red led at 500ms if robot is moving.
+			redMovingState();
 		}
 	}
 }
 
+/** 	AUDIO CONTROL THREAD **/
+void tAudio() {
+	uint8_t rx_p = INIT_VAR;
+	
+	for(;;){
+		osMessageQueueGet(audioQ, &rx_p, NULL, 0);
+		if(rx_p == CONNECT) { //Plays star trek startup tune on connection.
+			playStarTrekStartUp();
+			rx_p = RESET;
+			osMessageQueuePut(audioQ, &rx_p, NULL, 0);
+		} else if(rx_p == THE_END) { //Makes sure nothing plays after "The End" is pressed.
+			rx_p = INIT_VAR;
+			osMessageQueuePut(audioQ, &rx_p, NULL, 0);
+		}else if(rx_p != INIT_VAR){ // Otherwise plays hedwigs theme all the way through (after connection to the end).
+			playHedwigsTheme();
+		} 
+	}
+}
+
 /** MAIN CONTROL THREAD **/
-void control_thread(void *argument) {
+void tBrain(void *argument) {
 	for(;;) {
 		osMessageQueueGet(controlQ, &uart_data, NULL, osWaitForever);
 		osMessageQueuePut(motorQ, &uart_data, NULL, 0);
 		osMessageQueuePut(ledGreenQ, &uart_data, NULL, 0); 
 		osMessageQueuePut(ledRedQ, &uart_data, NULL, 0); 
 		osMessageQueuePut(audioQ, &uart_data, NULL, 0);
-		if(uart_data == 0x01) {
-			connect = 0x01;
-		} else if(uart_data == 0xFF) {
-			end = 0xFF;
-		} else {
-			connect = 0xFE;
-			end = 0xFE;
-		}
 	}
 }
  
@@ -204,25 +163,26 @@ int main (void) {
 	initLED();
 	initAudio();
 	
-	//Initialise Queues and Threads
+	//Initialise Queues, Threads and Kernel
 
   osKernelInitialize();                 // Initialize CMSIS-RTOS
 	
-	osThreadNew(control_thread, NULL, NULL);
+	osThreadNew(tBrain, NULL, NULL);
 	controlQ = osMessageQueueNew(MSG_COUNT, sizeof(uint8_t), NULL);
 	
-	osThreadNew(motor_thread, NULL, NULL);
+	osThreadNew(tMotorControl, NULL, NULL);
 	motorQ = osMessageQueueNew(MSG_COUNT, sizeof(uint8_t), NULL);
 	
-	osThreadNew(audio_thread, NULL, NULL);
+	osThreadNew(tAudio, NULL, NULL);
 	audioQ = osMessageQueueNew(MSG_COUNT, sizeof(uint8_t), NULL);
 	
-	osThreadNew(led_green_thread, NULL, NULL);
+	osThreadNew(tLedGreen, NULL, NULL);
 	ledGreenQ = osMessageQueueNew(MSG_COUNT, sizeof(uint8_t), NULL);
 	
-	osThreadNew(led_red_thread, NULL, NULL);
+	osThreadNew(tLedRed, NULL, NULL);
 	ledRedQ = osMessageQueueNew(MSG_COUNT, sizeof(uint8_t), NULL);
 	
   osKernelStart();                      // Start thread execution
+	
   for (;;) {}
 }
